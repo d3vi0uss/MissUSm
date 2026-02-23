@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dungeon Case Simulator</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+    text-align: center;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background: #1b1b1b;
+    font-size: 14px;
+}
+
+.chest {
+    margin-top: 40px;
+    font-size: 80px;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.chest:active {
+    transform: scale(0.9);
+}
+
+button {
+    padding: 15px 30px;
+    margin: 10px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+}
+
+.open-btn {
+    background: gold;
+    font-weight: bold;
+}
+
+.equipment {
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.item {
+    padding: 5px;
+    margin: 5px;
+}
+
+.common { color: #aaa; }
+.rare { color: #4da6ff; }
+.epic { color: #c266ff; }
+.legendary { color: gold; }
+
+.progress-container {
+    margin: 20px;
+    background: #333;
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: lime;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+    <div>Gold: <span id="gold">0</span></div>
+    <div>Keys: <span id="keys">5</span></div>
+    <div>Floor: <span id="floor">1</span></div>
+</div>
+
+<div class="chest" onclick="openChest()">📦</div>
+<button class="open-btn" onclick="openChest()">OPEN CHEST</button>
+
+<div id="result"></div>
+
+<div class="equipment">
+    <h3>Equipped Weapon</h3>
+    <div id="weapon">None</div>
+</div>
+
+<div class="progress-container">
+    <div class="progress-bar" id="progress"></div>
+</div>
+
+<script>
+let gold = 0;
+let keys = 5;
+let floor = 1;
+let damage = 1;
+let progress = 0;
+let equipped = null;
+
+const rarityTable = [
+    { name: "Common", chance: 60, multiplier: 1, class: "common" },
+    { name: "Rare", chance: 25, multiplier: 2, class: "rare" },
+    { name: "Epic", chance: 10, multiplier: 4, class: "epic" },
+    { name: "Legendary", chance: 5, multiplier: 8, class: "legendary" }
+];
+
+function rollRarity() {
+    let roll = Math.random() * 100;
+    let cumulative = 0;
+
+    for (let r of rarityTable) {
+        cumulative += r.chance;
+        if (roll < cumulative) return r;
+    }
+}
+
+function openChest() {
+    if (keys <= 0) {
+        alert("No keys!");
+        return;
+    }
+
+    keys--;
+
+    let rarity = rollRarity();
+    let baseDamage = Math.floor(Math.random() * 5 + 1);
+    let itemDamage = baseDamage * rarity.multiplier;
+
+    let item = {
+        name: rarity.name + " Sword",
+        damage: itemDamage,
+        rarity: rarity
+    };
+
+    showItem(item);
+    autoEquip(item);
+    updateUI();
+    saveGame();
+}
+
+function showItem(item) {
+    document.getElementById("result").innerHTML =
+        `<div class="item ${item.rarity.class}">
+        ${item.name} - ${item.damage} DMG
+        </div>`;
+}
+
+function autoEquip(item) {
+    if (!equipped || item.damage > equipped.damage) {
+        equipped = item;
+        damage = item.damage;
+    } else {
+        gold += Math.floor(item.damage / 2);
+    }
+}
+
+function updateUI() {
+    document.getElementById("gold").innerText = gold;
+    document.getElementById("keys").innerText = keys;
+    document.getElementById("floor").innerText = floor;
+    document.getElementById("weapon").innerHTML =
+        equipped ? `${equipped.name} (${equipped.damage})` : "None";
+}
+
+function gameLoop() {
+    progress += damage * 0.02;
+
+    if (progress >= 100) {
+        progress = 0;
+        floor++;
+        gold += floor * 2;
+        keys++;
+    }
+
+    document.getElementById("progress").style.width = progress + "%";
+    updateUI();
+}
+
+setInterval(gameLoop, 100);
+
+function saveGame() {
+    localStorage.setItem("dungeonSave", JSON.stringify({
+        gold, keys, floor, damage, equipped
+    }));
+}
+
+function loadGame() {
+    let save = JSON.parse(localStorage.getItem("dungeonSave"));
+    if (save) {
+        gold = save.gold;
+        keys = save.keys;
+        floor = save.floor;
+        damage = save.damage;
+        equipped = save.equipped;
+    }
+}
+
+loadGame();
+updateUI();
+</script>
+
+</body>
+</html>
